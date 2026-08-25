@@ -1,0 +1,44 @@
+[project]
+name = "juelri-inference-server"
+version = "0.1.0"
+description = "Jewelry inference server (STT / TTS / Translate / Pronunciation Feedback)"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.32",
+    "python-multipart>=0.0.9",
+    "pydantic>=2.9",
+    "pydantic-settings>=2.5",
+    "python-dotenv>=1.0",
+    "faster-whisper>=1.0",
+    "openai>=1.50",
+    "httpx>=0.27",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.24",
+    "ruff>=0.6",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["app*"]
+
+[tool.pytest.ini_options]
+# tests/ 만 수집한다. scripts/stt_direct_test.py 는 이름이 *_test.py 라 기본 규칙에
+# 걸리는데, 그건 실제 모델로 손수 돌려보는 스크립트라 faster-whisper 를 import 한다 —
+# PROVIDER=mock 으로 도는 CI 에서는 수집만으로 ImportError 가 난다.
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+# B008: FastAPI's Depends()/Form() in argument defaults is the idiomatic pattern, not a bug.
+ignore = ["B008"]
