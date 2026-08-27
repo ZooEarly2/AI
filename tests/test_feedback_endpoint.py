@@ -7,6 +7,7 @@
    2026-08-24 실측에서 여기가 전부 422 였다.
 """
 
+from app.core.sentences import SENTENCES
 from tests.conftest import data_of
 
 
@@ -14,7 +15,11 @@ def test_list_sentences_is_enveloped_and_camel_case(client):
     response = client.get("/internal/v1/feedback/sentences")
     assert response.status_code == 200
     data = data_of(response)
-    assert len(data) == 10
+    # 개수를 숫자로 못박지 않는다 — 문장이 늘 때마다 여기가 같이 깨지는데, 그건
+    # 목록이 봉투에 담겨 camelCase 로 나가는지와 아무 상관이 없다. 대신 카탈로그와
+    # 같은 것을 주는지를 본다(둘이 어긋나는 것이 진짜 사고다).
+    assert len(data) == len(SENTENCES)
+    assert {item["sentenceId"] for item in data} == {sid.value for sid in SENTENCES}
     assert {"sentenceId", "category", "text", "translations"} <= data[0].keys()
     assert {item["category"] for item in data} == {"arrival", "lunch", "departure", "study"}
 
@@ -32,6 +37,33 @@ def test_every_sentence_carries_mother_tongue_translations(client):
     for item in data:
         assert item["translations"].get("vi"), item["sentenceId"]
         assert item["translations"].get("zh"), item["sentenceId"]
+
+
+def test_translation_parts_point_at_real_tokens(client):
+    """빈칸 자리를 짚어주는 대응표가 실제 어절을 가리키는가.
+
+    조각을 이으면 번역문과 같은지는 `sentences.py` 가 수입 시점에 검산한다.
+    여기서 보는 것은 **앱이 받는 모양**이다 — camelCase 로 나가는지, k 가 그 문장의
+    어절 범위 안인지. k 가 범위를 넘으면 앱은 아무것도 짚지 못하고 조용히 넘어가서,
+    전구를 눌러도 빈칸이 어디인지 안 보이는 상태가 된다.
+
+    동시(study)에는 대응표가 없다 — 시는 빈칸 퀴즈를 내지 않는다.
+    """
+    data = data_of(client.get("/internal/v1/feedback/sentences"))
+    checked = 0
+    for item in data:
+        parts = item["translationParts"]
+        if item["category"] == "study":
+            assert parts == {}, item["sentenceId"]
+            continue
+        assert set(parts) == {"vi", "zh"}, item["sentenceId"]
+        last = len(item["text"].split()) - 1
+        for lang, chunks in parts.items():
+            covered = {k for chunk in chunks for k in chunk["k"]}
+            assert covered <= set(range(last + 1)), f'{item["sentenceId"]}/{lang}'
+            assert covered, f'{item["sentenceId"]}/{lang} 은 아무 어절도 안 가리킨다'
+            checked += 1
+    assert checked == 36, checked  # 18문장 x 2언어
 
 
 def test_off_script_has_its_own_error_code(client, wav_bytes, monkeypatch):

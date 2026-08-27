@@ -3,7 +3,13 @@ from fastapi import APIRouter, Depends, File, Form, UploadFile
 from app.api.deps import get_provider
 from app.core.envelope import success
 from app.core.exceptions import InvalidRequest
-from app.core.sentences import SENTENCES, SentenceId, category_of, translations_of
+from app.core.sentences import (
+    SENTENCES,
+    SentenceId,
+    category_of,
+    translation_parts_of,
+    translations_of,
+)
 from app.providers.base import InferenceProvider
 from app.schemas.feedback import ExpressionFeedbackRequest, SentenceItem
 from app.services import feedback_service
@@ -30,6 +36,7 @@ def list_sentences(provider: InferenceProvider = Depends(get_provider)):
             category=category_of(sid),
             text=text,
             translations=translations_of(text),
+            translation_parts=translation_parts_of(sid),
         )
         for sid, text in SENTENCES.items()
     ]
