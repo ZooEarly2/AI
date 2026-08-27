@@ -26,6 +26,7 @@ class SentenceId(str, Enum):
     STUDY_1 = "study_1"
     STUDY_2 = "study_2"
     STUDY_3 = "study_3"
+    STUDY_4 = "study_4"
     LUNCH_1 = "lunch_1"
     LUNCH_2 = "lunch_2"
     LUNCH_3 = "lunch_3"
@@ -50,6 +51,10 @@ SENTENCES: dict[SentenceId, str] = {
     SentenceId.STUDY_1: "노란 꽃이 피었어요. 예쁜 꽃이 피었어요. 바람이 살랑살랑 꽃이 웃어요.",
     SentenceId.STUDY_2: "눈이 와요, 눈이 와요. 하얀 눈이 펑펑 와요. 우리 같이 눈사람 만들어요.",
     SentenceId.STUDY_3: "파도가 와요, 철썩. 내 발을 만져요. 내가 뒤로 가면 파도도 따라와요.",
+    SentenceId.STUDY_4: (
+        "내 몸에 불덩이가 들어왔다. 뜨끈뜨끈. "
+        "불덩이를 따라 몹시 추운 사람도 들어왔다. 오들오들."
+    ),
     SentenceId.LUNCH_1: "조금만 주세요.",
     SentenceId.LUNCH_2: "적당히 주세요.",
     SentenceId.LUNCH_3: "많이 주세요.",
@@ -113,6 +118,13 @@ SENTENCE_TRANSLATIONS: dict[str, dict[str, str]] = {
     "파도가 와요, 철썩. 내 발을 만져요. 내가 뒤로 가면 파도도 따라와요.": {
         "vi": "Sóng đến rồi, ào ào. Sóng chạm vào chân mình. Mình lùi lại thì sóng cũng theo sau.",
         "zh": "波浪来了，哗啦。它碰到我的脚。我往后退，波浪也跟过来。",
+    },
+    "내 몸에 불덩이가 들어왔다. 뜨끈뜨끈. 불덩이를 따라 몹시 추운 사람도 들어왔다. 오들오들.": {
+        "vi": (
+            "Trong người mình có một cục lửa. Nóng hổi nóng hổi. "
+            "Theo cục lửa, một người rất lạnh cũng đi vào. Run rẩy run rẩy."
+        ),
+        "zh": "我身体里进来了一个火球。热乎乎的。跟着火球，一个很冷的人也进来了。冷得发抖。",
     },
     "조금만 주세요.": {"vi": "Cho con một chút thôi ạ.", "zh": "请给我一点点。"},
     "적당히 주세요.": {"vi": "Cho con vừa đủ ạ.", "zh": "请给我适量。"},
