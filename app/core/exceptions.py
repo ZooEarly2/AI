@@ -44,6 +44,23 @@ class InvalidRequest(InferenceServerError):
     error_code = "INVALID_PARAMETER"
 
 
+class OffScript(InferenceServerError):
+    """아이가 고른 문장이 아니라 **아주 다른 말**을 했다.
+
+    ``INVALID_PARAMETER`` 와 갈라 놓은 이유가 있다. 저쪽은 "요청이 잘못됐다"라서
+    아이가 할 수 있는 일이 없지만, 이쪽은 **다시 말하면 되는 일**이다. 앱이 두
+    경우를 구분하지 못하면 둘 다 같은 처리를 하게 되는데, 실제로 그랬다 —
+    앱은 채점이 실패한 모든 경우를 칭찬 화면으로 흘려보내서, 아이가 전혀 다른
+    말을 해도 "잘했어!" 가 떴다. 서버는 알고 있었고 앱이 그 신호를 버렸다.
+
+    상태 코드는 422 그대로다. 게이트웨이가 422 만 본문째 통과시키기 때문에
+    (§1.3) 다른 코드로 바꾸면 이 구분이 앱까지 닿지 못한다.
+    """
+
+    status_code = 422
+    error_code = "OFF_SCRIPT"
+
+
 class SttFailed(InferenceServerError):
     """STT 엔진 자체가 실패했다.
 

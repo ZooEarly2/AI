@@ -15,8 +15,49 @@ def test_list_sentences_is_enveloped_and_camel_case(client):
     assert response.status_code == 200
     data = data_of(response)
     assert len(data) == 10
-    assert {"sentenceId", "category", "text"} <= data[0].keys()
+    assert {"sentenceId", "category", "text", "translations"} <= data[0].keys()
     assert {item["category"] for item in data} == {"arrival", "lunch", "departure", "study"}
+
+
+def test_every_sentence_carries_mother_tongue_translations(client):
+    """열 문장 모두 베트남어·중국어 뜻을 달고 나가야 한다.
+
+    앱의 힌트 전구가 이 값 하나만 본다. 번역을 부르는 요청이 따로 없으므로,
+    여기서 비면 아이가 전구를 눌러도 **아무 일도 일어나지 않는다** — 화면에는
+    오류도 안 뜨고 버튼만 먹통이라 아이도 어른도 무엇이 잘못됐는지 모른다.
+    문장을 새로 추가할 때 번역을 빠뜨리는 것이 유일하게 있을 법한 사고라
+    목록 전체를 훑는다.
+    """
+    data = data_of(client.get("/internal/v1/feedback/sentences"))
+    for item in data:
+        assert item["translations"].get("vi"), item["sentenceId"]
+        assert item["translations"].get("zh"), item["sentenceId"]
+
+
+def test_off_script_has_its_own_error_code(client, wav_bytes, monkeypatch):
+    """전혀 다른 말을 했을 때는 INVALID_PARAMETER 가 아니라 OFF_SCRIPT 다.
+
+    두 코드가 같으면 앱이 구분을 못 한다. 실제로 그랬다 — 앱은 채점이 실패한
+    모든 경우를 칭찬 화면으로 흘려보내서, 아이가 문장과 전혀 다른 말을 해도
+    "잘했어!" 가 떴다. 서버는 off_script 로 알고 있었고 앱이 그 신호를 버렸다.
+
+    상태 코드가 422 인 것도 함께 지킨다. 게이트웨이는 422 만 본문째 통과시키므로
+    (연동 규약 §1.3) 여기서 코드가 바뀌면 이 구분이 앱까지 닿지 못한다.
+    """
+    from app.providers.mock import MockProvider
+
+    def off_script(self, audio_path: str, text: str):
+        return {"sentence": text, "off_script": True, "words": []}
+
+    monkeypatch.setattr(MockProvider, "score_pronunciation", off_script)
+
+    response = client.post(
+        "/internal/v1/feedback/speaking",
+        files={"audio": ("speech.m4a", wav_bytes, "audio/mp4")},
+        data={"sentenceId": "arrival_2"},
+    )
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "OFF_SCRIPT"
 
 
 def test_speaking_accepts_gateway_part_names(client, wav_bytes):

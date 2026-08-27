@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from app.core.sentences import SentenceId
+from pydantic import Field
+
 from app.schemas.common import CamelModel, CamelRequest
 
 
@@ -8,6 +10,13 @@ class SentenceItem(CamelModel):
     sentence_id: SentenceId
     category: str
     text: str
+    #: 모국어 번역 — 표현 퀴즈의 힌트(전구)가 이 값을 띄운다.
+    #:
+    #: 언어 코드를 키로 담아 **한 번에 다 준다**(`{"vi": "...", "zh": "..."}`).
+    #: 아이 모국어는 앱에만 있고, 어차피 10문장뿐이라 골라 보내려고 요청을 나누는 것이
+    #: 더 번거롭다. 앱은 화면 진입 때 받아 두었다가 전구를 누르는 즉시 띄운다 —
+    #: 그 순간 서버를 부르면 아이는 버튼이 안 눌린 줄 알고 다시 누른다.
+    translations: dict[str, str] = Field(default_factory=dict)
 
 
 class WordScore(CamelModel):

@@ -37,6 +37,54 @@ SENTENCES: dict[SentenceId, str] = {
 }
 
 
+#: 연습 문장의 모국어 번역.
+#:
+#: 표현 퀴즈의 힌트(전구)가 이 값을 그대로 띄운다. **문장이 고정 10개라 매번 LLM 에
+#: 물어볼 이유가 없다** — 물어보면 아이가 전구를 누르고 몇 초를 기다려야 하고, 같은
+#: 문장을 몇 번이고 다시 번역하며 돈을 쓴다.
+#:
+#: 사람이 다듬은 문장이라는 점이 중요하다. 아이가 "이 말이 무슨 뜻이지?" 하고 누르는
+#: 자리라, 기계 번역의 어색한 문장보다 또박또박한 한 줄이 낫다.
+#:
+#: 문장을 고치면 **이 표도 같이 고쳐야 한다.** 같은 파일에 나란히 둔 이유다.
+SENTENCE_TRANSLATIONS: dict[str, dict[str, str]] = {
+    "안녕 나도 만나서 반가워 !": {
+        "vi": "Chào cậu! Mình cũng rất vui được gặp cậu!",
+        "zh": "你好！我也很高兴见到你！",
+    },
+    "안녕! 우리 같이 놀자!": {
+        "vi": "Chào cậu! Chúng mình cùng chơi nhé!",
+        "zh": "你好！我们一起玩吧！",
+    },
+    "안녕! 같이 들어가자!": {
+        "vi": "Chào cậu! Cùng vào lớp nào!",
+        "zh": "你好！我们一起进去吧！",
+    },
+    "노란 꽃이 피었어요. 예쁜 꽃이 피었어요. 바람이 살랑살랑 꽃이 웃어요.": {
+        "vi": "Hoa vàng đã nở. Hoa xinh đã nở. Gió thổi hiu hiu, hoa mỉm cười.",
+        "zh": "黄色的花开了。漂亮的花开了。风儿轻轻吹，花儿笑了。",
+    },
+    "조금만 주세요.": {"vi": "Cho con một chút thôi ạ.", "zh": "请给我一点点。"},
+    "적당히 주세요.": {"vi": "Cho con vừa đủ ạ.", "zh": "请给我适量。"},
+    "많이 주세요.": {"vi": "Cho con nhiều một chút ạ.", "zh": "请给我多一点。"},
+    "선생님, 안녕히 가세요!": {"vi": "Thưa cô, cô về ạ!", "zh": "老师，再见！"},
+    "선생님, 감사합니다!": {"vi": "Em cảm ơn cô ạ!", "zh": "老师，谢谢您！"},
+    "내일 또 뵙겠습니다!": {"vi": "Ngày mai em lại gặp cô ạ!", "zh": "明天见！"},
+    # 상대 캐릭터 대사 — 대화 장면에서도 뜻을 물어볼 수 있다
+    "안녕! 만나서 반가워.": {
+        "vi": "Chào cậu! Rất vui được gặp cậu.",
+        "zh": "你好！很高兴见到你。",
+    },
+    "불고기 많이 줄까?": {"vi": "Cho con nhiều thịt nướng nhé?", "zh": "要给你多一点烤肉吗？"},
+    "이제 집에 갈 시간이에요 !": {"vi": "Đến giờ về nhà rồi!", "zh": "到回家的时间了！"},
+}
+
+
+def translations_of(text: str) -> dict[str, str]:
+    """그 문장의 번역들. 없으면 빈 표 — 지어낸 번역을 아이에게 보여주지 않는다."""
+    return SENTENCE_TRANSLATIONS.get(text.strip(), {})
+
+
 def category_of(sentence_id: SentenceId) -> str:
     """id 접두어(arrival/lunch/departure)를 카테고리로 쓴다."""
     return sentence_id.value.rsplit("_", 1)[0]

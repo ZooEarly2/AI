@@ -8,7 +8,7 @@ from fastapi import UploadFile
 
 from app.core.audio_storage import save_temp_audio
 from app.core.config import settings
-from app.core.exceptions import InvalidRequest, UpstreamUnavailable
+from app.core.exceptions import InvalidRequest, OffScript, UpstreamUnavailable
 from app.core.languages import to_code, to_enum
 from app.core.logging import get_logger
 from app.core.sentences import SENTENCES, SentenceId
@@ -64,7 +64,10 @@ def score_speaking(
             raise InvalidRequest(exc.message, field="audio") from exc
 
     if result["off_script"]:
-        raise InvalidRequest("읽은 음성이 고른 문장과 다릅니다.", field="audio")
+        # 다시 말하면 되는 일이라 INVALID_PARAMETER 와 갈라 둔다 — 앱이 이 코드를
+        # 보고 녹음 화면으로 되돌린다. 예전에는 둘이 같은 코드라, 앱이 구분하지
+        # 못하고 전혀 다른 말을 한 아이에게도 칭찬을 띄웠다.
+        raise OffScript("읽은 음성이 고른 문장과 다릅니다.", field="audio")
 
     if not any(w["z"] is not None for w in result["words"]):
         raise InvalidRequest("발음을 채점할 수 있는 어절이 없습니다.", field="audio")

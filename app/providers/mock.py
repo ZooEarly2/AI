@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from app.core.audio_tone import chime_wav
 from app.core.korean import josa, vocative
+from app.core.sentences import translations_of
 from app.providers.base import (
     ChatResult,
     ExpressionFeedbackResult,
@@ -20,37 +21,6 @@ from app.providers.base import (
 )
 
 #: 추천 문장 10개의 모국어 번역. "이 말의 뜻이에요!" 화면이 이 값을 그대로 쓴다.
-_TRANSLATIONS: dict[str, dict[str, str]] = {
-    "안녕 나도 만나서 반가워 !": {
-        "vi": "Chào cậu! Mình cũng rất vui được gặp cậu!",
-        "zh": "你好！我也很高兴见到你！",
-    },
-    "안녕! 우리 같이 놀자!": {
-        "vi": "Chào cậu! Chúng mình cùng chơi nhé!",
-        "zh": "你好！我们一起玩吧！",
-    },
-    "안녕! 같이 들어가자!": {
-        "vi": "Chào cậu! Cùng vào lớp nào!",
-        "zh": "你好！我们一起进去吧！",
-    },
-    "노란 꽃이 피었어요. 예쁜 꽃이 피었어요. 바람이 살랑살랑 꽃이 웃어요.": {
-        "vi": "Hoa vàng đã nở. Hoa xinh đã nở. Gió thổi hiu hiu, hoa mỉm cười.",
-        "zh": "黄色的花开了。漂亮的花开了。风儿轻轻吹，花儿笑了。",
-    },
-    "조금만 주세요.": {"vi": "Cho con một chút thôi ạ.", "zh": "请给我一点点。"},
-    "적당히 주세요.": {"vi": "Cho con vừa đủ ạ.", "zh": "请给我适量。"},
-    "많이 주세요.": {"vi": "Cho con nhiều một chút ạ.", "zh": "请给我多一点。"},
-    "선생님, 안녕히 가세요!": {"vi": "Thưa cô, cô về ạ!", "zh": "老师，再见！"},
-    "선생님, 감사합니다!": {"vi": "Em cảm ơn cô ạ!", "zh": "老师，谢谢您！"},
-    "내일 또 뵙겠습니다!": {"vi": "Ngày mai em lại gặp cô ạ!", "zh": "明天见！"},
-    # 상대 캐릭터 대사 — 대화 장면에서도 뜻을 물어볼 수 있다
-    "안녕! 만나서 반가워.": {
-        "vi": "Chào cậu! Rất vui được gặp cậu.",
-        "zh": "你好！很高兴见到你。",
-    },
-    "불고기 많이 줄까?": {"vi": "Cho con nhiều thịt nướng nhé?", "zh": "要给你多一点烤肉吗？"},
-    "이제 집에 갈 시간이에요 !": {"vi": "Đến giờ về nhà rồi!", "zh": "到回家的时间了！"},
-}
 
 #: 장면별 동화 문구 틀. 실제 기록(상대 대사·아이가 고른 말)만 넣고 새 사건은 만들지 않는다.
 _SCENE_TEMPLATES: dict[str, dict[str, str]] = {
@@ -102,8 +72,8 @@ class MockProvider:
     def translate(self, text: str, source_language: str, target_language: str) -> str:
         if target_language == source_language:
             return text
-        table = _TRANSLATIONS.get(text.strip())
-        if table and target_language in table:
+        table = translations_of(text)
+        if target_language in table:
             return table[target_language]
         # 사전에 없는 문장은 원문을 돌려준다 — 지어낸 번역을 아이에게 보여주지 않는다.
         return text
