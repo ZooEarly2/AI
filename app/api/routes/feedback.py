@@ -19,7 +19,7 @@ router = APIRouter(prefix="/feedback", tags=["feedback"])
 
 @router.get("/sentences")
 def list_sentences(provider: InferenceProvider = Depends(get_provider)):
-    """추천 문장 10개(등교/급식/하교 각 3개 + 수업 동시 1개).
+    """연습 문장 전부(등교 9 · 급식 3 · 하교 6 · 동시 4 · 수학 15).
 
     이 서버가 sentenceId ↔ 문장 텍스트의 **단일 소스**다. 앱은 id 만 들고 다니다가
     채점 때 그대로 돌려보낸다 — 자유 텍스트를 주고받으면 화면에 보인 문장과 채점한

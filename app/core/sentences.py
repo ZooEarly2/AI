@@ -12,6 +12,15 @@ class SentenceId(str, Enum):
     - 학습(study): 동시(童詩) 한 편을 그대로 "같이" 읽는 동시 낭독형. 앞의 셋과 성격이
       다르다 — 아이가 고르는 것이 아니라 앱이 회차마다 세 편 중 하나를 뽑아 보여준다.
       그래서 한 항목이 문장 하나가 아니라 시 한 편 전체다(여러 줄이 이어져 있다).
+    - 수학(math): 수업시간의 수학 차례에서 아이가 **답을 고른 뒤 소리 내어 읽는**
+      문장이다. 앞의 셋처럼 고르는 것도, 동시처럼 통째로 읽는 것도 아니다 —
+      아이가 그림의 과일을 세어 보기 다섯 중 하나를 고르면, 그 문장이 그대로
+      읽을 문장이 된다. 그래서 과일 3종 × 개수 1~5 의 15가지가 모두 필요하다.
+
+      이 15개는 앱이 화면에 띄우는 글자와 **한 글자도 다르면 안 된다.** 아이는
+      화면의 문장을 보고 읽는데 채점은 여기 문장으로 이뤄지기 때문이다.
+      앱 쪽 짝은 frontend/src/scenarios/counting.ts 의 countSentence() 와
+      data.ts 의 CLASS.fruits[].sentenceIds 다.
     """
 
     ARRIVAL_1 = "arrival_1"
@@ -36,6 +45,24 @@ class SentenceId(str, Enum):
     DEPARTURE_4 = "departure_4"
     DEPARTURE_5 = "departure_5"
     DEPARTURE_6 = "departure_6"
+    # 사과 1~5
+    MATH_1 = "math_1"
+    MATH_2 = "math_2"
+    MATH_3 = "math_3"
+    MATH_4 = "math_4"
+    MATH_5 = "math_5"
+    # 수박 1~5
+    MATH_6 = "math_6"
+    MATH_7 = "math_7"
+    MATH_8 = "math_8"
+    MATH_9 = "math_9"
+    MATH_10 = "math_10"
+    # 바나나 1~5
+    MATH_11 = "math_11"
+    MATH_12 = "math_12"
+    MATH_13 = "math_13"
+    MATH_14 = "math_14"
+    MATH_15 = "math_15"
 
 
 SENTENCES: dict[SentenceId, str] = {
@@ -66,6 +93,30 @@ SENTENCES: dict[SentenceId, str] = {
     SentenceId.DEPARTURE_4: "오늘 정말 재미있었어요!",
     SentenceId.DEPARTURE_5: "내일 또 올게요!",
     SentenceId.DEPARTURE_6: "네, 조심해서 갈게요!",
+    # ── 수학: 과일 개수 세기 ────────────────────────────────────────────────
+    #
+    # 마침표를 찍지 않는다. 앱이 이 문장을 **보기 버튼 다섯 줄**에도 그대로 띄우는데
+    # 거기에 마침표가 붙으면 고르는 칸이 아니라 읽을거리처럼 보인다. 위 문장들과
+    # 어울리지 않지만, 화면 글자와 채점 문장이 어긋나는 편이 훨씬 나쁘다.
+    #
+    # 조사가 과일마다 다르다 — 사과**가** · 수박**이** · 바나나**가**. 받침 유무로
+    # 갈린다. 하나로 못박으면 셋 중 하나는 반드시 틀린 한국어가 되는데, 한국어를
+    # 가르치는 앱이 화면에 틀린 조사를 띄울 수는 없다.
+    SentenceId.MATH_1: "사과가 한 개 있어요",
+    SentenceId.MATH_2: "사과가 두 개 있어요",
+    SentenceId.MATH_3: "사과가 세 개 있어요",
+    SentenceId.MATH_4: "사과가 네 개 있어요",
+    SentenceId.MATH_5: "사과가 다섯 개 있어요",
+    SentenceId.MATH_6: "수박이 한 개 있어요",
+    SentenceId.MATH_7: "수박이 두 개 있어요",
+    SentenceId.MATH_8: "수박이 세 개 있어요",
+    SentenceId.MATH_9: "수박이 네 개 있어요",
+    SentenceId.MATH_10: "수박이 다섯 개 있어요",
+    SentenceId.MATH_11: "바나나가 한 개 있어요",
+    SentenceId.MATH_12: "바나나가 두 개 있어요",
+    SentenceId.MATH_13: "바나나가 세 개 있어요",
+    SentenceId.MATH_14: "바나나가 네 개 있어요",
+    SentenceId.MATH_15: "바나나가 다섯 개 있어요",
 }
 
 
@@ -145,6 +196,29 @@ SENTENCE_TRANSLATIONS: dict[str, dict[str, str]] = {
     },
     "불고기 많이 줄까?": {"vi": "Cho con nhiều thịt nướng nhé?", "zh": "要给你多一点烤肉吗？"},
     "이제 집에 갈 시간이에요 !": {"vi": "Đến giờ về nhà rồi!", "zh": "到回家的时间了！"},
+    # ── 수학: 과일 개수 세기 ─────────────────────────────────────────────
+    #
+    # 이 화면에는 힌트 전구가 없다. 그래도 채워 두는 이유는 목록에 오르는 문장은
+    # 전부 뜻을 달고 나가야 한다는 규칙 때문이다(tests 가 전수 검사한다) —
+    # 나중에 이 문장에 전구가 붙어도 그때 다시 찾아올 일이 없다.
+    #
+    # 세는 말은 언어마다 다르다. 베트남어는 둥근 것에 quả, 중국어는 사과·수박이
+    # 个 인데 바나나는 根 이다. 그리고 중국어 2는 세는 말 앞에서 二가 아니라 两다.
+    "사과가 한 개 있어요": {"vi": "Có một quả táo.", "zh": "有一个苹果。"},
+    "사과가 두 개 있어요": {"vi": "Có hai quả táo.", "zh": "有两个苹果。"},
+    "사과가 세 개 있어요": {"vi": "Có ba quả táo.", "zh": "有三个苹果。"},
+    "사과가 네 개 있어요": {"vi": "Có bốn quả táo.", "zh": "有四个苹果。"},
+    "사과가 다섯 개 있어요": {"vi": "Có năm quả táo.", "zh": "有五个苹果。"},
+    "수박이 한 개 있어요": {"vi": "Có một quả dưa hấu.", "zh": "有一个西瓜。"},
+    "수박이 두 개 있어요": {"vi": "Có hai quả dưa hấu.", "zh": "有两个西瓜。"},
+    "수박이 세 개 있어요": {"vi": "Có ba quả dưa hấu.", "zh": "有三个西瓜。"},
+    "수박이 네 개 있어요": {"vi": "Có bốn quả dưa hấu.", "zh": "有四个西瓜。"},
+    "수박이 다섯 개 있어요": {"vi": "Có năm quả dưa hấu.", "zh": "有五个西瓜。"},
+    "바나나가 한 개 있어요": {"vi": "Có một quả chuối.", "zh": "有一根香蕉。"},
+    "바나나가 두 개 있어요": {"vi": "Có hai quả chuối.", "zh": "有两根香蕉。"},
+    "바나나가 세 개 있어요": {"vi": "Có ba quả chuối.", "zh": "有三根香蕉。"},
+    "바나나가 네 개 있어요": {"vi": "Có bốn quả chuối.", "zh": "有四根香蕉。"},
+    "바나나가 다섯 개 있어요": {"vi": "Có năm quả chuối.", "zh": "有五根香蕉。"},
 }
 
 

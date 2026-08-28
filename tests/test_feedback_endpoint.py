@@ -21,7 +21,13 @@ def test_list_sentences_is_enveloped_and_camel_case(client):
     assert len(data) == len(SENTENCES)
     assert {item["sentenceId"] for item in data} == {sid.value for sid in SENTENCES}
     assert {"sentenceId", "category", "text", "translations"} <= data[0].keys()
-    assert {item["category"] for item in data} == {"arrival", "lunch", "departure", "study"}
+    assert {item["category"] for item in data} == {
+        "arrival",
+        "lunch",
+        "departure",
+        "study",
+        "math",
+    }
 
 
 def test_every_sentence_carries_mother_tongue_translations(client):
@@ -47,13 +53,14 @@ def test_translation_parts_point_at_real_tokens(client):
     어절 범위 안인지. k 가 범위를 넘으면 앱은 아무것도 짚지 못하고 조용히 넘어가서,
     전구를 눌러도 빈칸이 어디인지 안 보이는 상태가 된다.
 
-    동시(study)에는 대응표가 없다 — 시는 빈칸 퀴즈를 내지 않는다.
+    빈칸 퀴즈를 내는 카테고리에만 대응표가 있다. 동시(study)와 수학(math)에는 없다 —
+    시는 통째로 읽고, 수학은 고른 문장을 그대로 읽는다. 둘 다 비울 어절이 없다.
     """
     data = data_of(client.get("/internal/v1/feedback/sentences"))
     checked = 0
     for item in data:
         parts = item["translationParts"]
-        if item["category"] == "study":
+        if item["category"] in {"study", "math"}:
             assert parts == {}, item["sentenceId"]
             continue
         assert set(parts) == {"vi", "zh"}, item["sentenceId"]
@@ -64,6 +71,51 @@ def test_translation_parts_point_at_real_tokens(client):
             assert covered, f'{item["sentenceId"]}/{lang} 은 아무 어절도 안 가리킨다'
             checked += 1
     assert checked == 36, checked  # 18문장 x 2언어
+
+
+def test_math_sentences_are_scorable(client, wav_bytes):
+    """수학 문장 15개가 실제로 채점을 통과하는가.
+
+    수업시간의 수학 차례는 아이가 개수를 고른 뒤 그 문장을 소리 내어 읽는다.
+    예전에는 이 문장이 목록에 없어서 채점 자체가 불가능했고, 그래서 앱이
+    ``/stt`` 로 받아쓴 글자에서 숫자만 뽑아 맞춰 보는 우회로를 썼다 —
+    "다섯" 한 마디만 해도 문장을 다 읽은 것으로 쳤다.
+
+    id 를 앱이 만들어 보내므로(과일과 개수로 고른다) **15개가 하나도 빠짐없이**
+    살아 있어야 한다. 하나만 없어도 그 과일·그 개수가 나온 아이만 채점을 못 받는데,
+    회차마다 무작위라 재현이 어렵다.
+    """
+    ids = [sid for sid in SENTENCES if sid.value.startswith("math_")]
+    assert len(ids) == 15, len(ids)  # 과일 3종 x 개수 1~5
+
+    for sid in ids:
+        response = client.post(
+            "/internal/v1/feedback/speaking",
+            files={"audio": ("speech.m4a", wav_bytes, "audio/mp4")},
+            data={"sentenceId": sid.value},
+        )
+        assert response.status_code == 200, (sid.value, response.text)
+        assert data_of(response)["sentence"] == SENTENCES[sid]
+
+
+def test_unknown_sentence_id_is_invalid_parameter_not_off_script(client, wav_bytes):
+    """목록에 없는 id 는 OFF_SCRIPT 가 아니라 INVALID_PARAMETER 다.
+
+    둘 다 422 라 앱이 상태 코드만 보면 구분하지 못한다. 그런데 뜻이 정반대다 —
+    OFF_SCRIPT 는 "다시 말하면 되는 일"이고, INVALID_PARAMETER 는 아이가 아무리
+    잘 읽어도 통과할 수 없는 일이다. 앱이 뒤쪽을 "다시 말해볼래?" 로 다루면
+    아이는 영영 못 나가는 화면에 갇힌다.
+
+    서버가 아직 이 문장을 모를 때 앱이 옛 방식으로 물러설 수 있어야 해서,
+    코드로 갈리는 것이 계약의 일부다.
+    """
+    response = client.post(
+        "/internal/v1/feedback/speaking",
+        files={"audio": ("speech.m4a", wav_bytes, "audio/mp4")},
+        data={"sentenceId": "math_99"},
+    )
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "INVALID_PARAMETER"
 
 
 def test_off_script_has_its_own_error_code(client, wav_bytes, monkeypatch):
