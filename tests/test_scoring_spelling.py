@@ -6,7 +6,7 @@
 """
 
 from app.core.sentences import SENTENCES, SentenceId
-from app.services.feedback_service import _to_spelling
+from app.services.feedback_service import _pick_weakest_word, _to_spelling
 
 
 def _result(sentence: str, words: list[tuple[str, float]]):
@@ -48,3 +48,38 @@ def test_falls_back_when_word_counts_differ():
 
     assert sentence == "안녕 우리"
     assert [w["word"] for w in words] == ["안녕", "우리"]
+
+
+def _w(word: str, z: float):
+    return {"word": word, "z": z, "warn": z < -1.5, "worstPhone": None}
+
+
+def test_one_syllable_word_is_never_the_target():
+    """한 글자짜리 어절은 짚지 않는다.
+
+    채점기가 그 길이를 신뢰성 있게 재지 못한다. 합성음으로 만든 **완벽한 발음**을
+    넣어도 "개" 가 -3.7 ~ -5.1 로 나왔다(여러 글자 어절은 같은 발화에서 0 언저리).
+    짧아서 앞뒤 소리에 묻히는 탓이지 잘못 읽어서가 아니다.
+
+    그대로 두면 수학 문장은 반드시 "개" 를 물고 있으므로, 아이가 아무리 잘 읽어도
+    칭찬 화면에 갈 수 없고 빈칸은 늘 배울 것 없는 자리에 뚫린다.
+    """
+    words = [_w("사과가", -0.84), _w("다섯", -0.60), _w("개", -3.67), _w("있어요", 0.08)]
+    # 제일 낮은 것은 "개" 지만 짚지 않는다 — 나머지가 기준을 넘었으니 잘 읽은 것이다
+    assert _pick_weakest_word(words) is None
+
+
+def test_one_syllable_word_does_not_shadow_a_real_weak_word():
+    """한 글자를 건너뛰되, 진짜 약한 어절은 그대로 짚는다."""
+    words = [_w("사과가", -2.9), _w("다섯", -0.60), _w("개", -5.0), _w("있어요", 0.08)]
+    picked = _pick_weakest_word(words)
+    assert picked is not None
+    assert picked[1]["word"] == "사과가"
+    assert picked[0] == 0
+
+
+def test_punctuation_does_not_count_as_a_syllable():
+    """"계세요!" 는 세 글자다. 문장부호 때문에 길이를 잘못 세면 안 된다."""
+    words = [_w("선생님,", -0.15), _w("안녕히", -0.96), _w("계세요!", -2.21)]
+    picked = _pick_weakest_word(words)
+    assert picked is not None and picked[1]["word"] == "계세요!"

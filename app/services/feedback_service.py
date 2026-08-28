@@ -26,14 +26,45 @@ log = get_logger(__name__)
 # -1.5 이상이면 발음이 좋은 것으로 보고 피드백 퀴즈를 띄우지 않는다.
 _Z_WEAK_THRESHOLD = -1.5
 
+# 이 글자 수보다 짧은 어절은 짚지 않는다.
+#
+# **채점기가 한 글자짜리 어절을 신뢰성 있게 재지 못한다.** 합성음(TTS)으로 만든
+# 완벽한 발음을 넣어 실측한 값이다:
+#
+#   "사과가 다섯 개 있어요"  사과가 -0.84 · 다섯 -0.60 · **개 -3.67** · 있어요 +0.08
+#   "사과가 세 개 있어요"    사과가 +0.07 · 세 -3.66 · **개 -5.05** · 있어요 +0.30
+#
+# 여러 글자 어절은 0 언저리인데 한 글자만 -3 아래로 떨어진다. 짧아서 앞뒤 소리에
+# 묻히는 탓이지 잘못 읽어서가 아니다. 그대로 두면 두 가지가 망가진다 —
+# 수학 문장에는 "개" 가 반드시 들어가므로 **아이가 아무리 잘 읽어도 칭찬 화면에
+# 갈 수 없고**, 빈칸은 늘 "개" 에 뚫려 배울 것이 없는 자리를 연습시킨다.
+#
+# 잴 수 없는 것으로 아이를 판단하지 않는다. 짚을 어절이 없으면 잘 읽은 것으로 본다.
+_MIN_TARGET_SYLLABLES = 2
+
+
+def _hangul_syllables(word: str) -> int:
+    """그 어절의 한글 글자 수. 문장부호는 세지 않는다("계세요!" 는 3)."""
+    return sum(1 for ch in word if 0xAC00 <= ord(ch) <= 0xD7A3)
+
 
 def _pick_weakest_word(words: list[WordScoreDict]) -> tuple[int, WordScoreDict] | None:
     """z < 임계값인 어절 중 가장 낮은 것 1개. 해당하는 어절이 없으면 ``None``.
 
     warn 이 여러 개 켜져도 하나만 고른다 — 화면의 빈칸이 하나뿐이고, 아이에게 한 번에
     여러 개를 짚어주면 무엇을 고쳐야 할지 알 수 없다.
+
+    한 글자짜리 어절은 제외한다(``_MIN_TARGET_SYLLABLES`` 주석 참고). 그 자리는
+    채점기가 잘 읽어도 늘 낮은 값을 내놓아서, 짚으면 아이가 고칠 수 없는 것을
+    고치라고 하는 셈이 된다.
     """
-    weak = [(i, w) for i, w in enumerate(words) if w["z"] is not None and w["z"] < _Z_WEAK_THRESHOLD]
+    weak = [
+        (i, w)
+        for i, w in enumerate(words)
+        if w["z"] is not None
+        and w["z"] < _Z_WEAK_THRESHOLD
+        and _hangul_syllables(w["word"]) >= _MIN_TARGET_SYLLABLES
+    ]
     if not weak:
         return None
     return min(weak, key=lambda iw: iw[1]["z"])
