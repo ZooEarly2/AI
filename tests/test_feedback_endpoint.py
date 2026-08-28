@@ -53,14 +53,15 @@ def test_translation_parts_point_at_real_tokens(client):
     어절 범위 안인지. k 가 범위를 넘으면 앱은 아무것도 짚지 못하고 조용히 넘어가서,
     전구를 눌러도 빈칸이 어디인지 안 보이는 상태가 된다.
 
-    빈칸 퀴즈를 내는 카테고리에만 대응표가 있다. 동시(study)와 수학(math)에는 없다 —
-    시는 통째로 읽고, 수학은 고른 문장을 그대로 읽는다. 둘 다 비울 어절이 없다.
+    빈칸 퀴즈를 내는 카테고리에만 대응표가 있다. 동시(study)에는 없다 — 시는
+    통째로 읽고 빈칸을 내지 않는다. 수학(math)은 고른 문장을 읽은 **뒤에** 발음이
+    약한 어절 하나로 빈칸 퀴즈를 내므로 대응표가 필요하다.
     """
     data = data_of(client.get("/internal/v1/feedback/sentences"))
     checked = 0
     for item in data:
         parts = item["translationParts"]
-        if item["category"] in {"study", "math"}:
+        if item["category"] == "study":
             assert parts == {}, item["sentenceId"]
             continue
         assert set(parts) == {"vi", "zh"}, item["sentenceId"]
@@ -70,7 +71,7 @@ def test_translation_parts_point_at_real_tokens(client):
             assert covered <= set(range(last + 1)), f'{item["sentenceId"]}/{lang}'
             assert covered, f'{item["sentenceId"]}/{lang} 은 아무 어절도 안 가리킨다'
             checked += 1
-    assert checked == 36, checked  # 18문장 x 2언어
+    assert checked == 66, checked  # (등교9+급식3+하교6+수학15) x 2언어
 
 
 #: 수학 문장 15개를 **여기에 손으로 적어 둔다.**
