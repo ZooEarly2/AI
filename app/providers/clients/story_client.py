@@ -52,7 +52,10 @@ def _scene_brief(scene: dict) -> dict:
     if scene.get("child_said"):
         brief["아이가_한_말"] = scene["child_said"]
     if scene.get("poem_text"):
-        brief["아이가_읽은_동시"] = scene["poem_text"]
+        # 이름이 poem_text 라고 늘 동시인 것이 아니다. 수학이면 센 것을 적어 보낸다 —
+        # 라벨을 안 갈면 LLM 이 "동시를 읽었다" 는 전제로 문장을 짓는다.
+        key = "아이가_센_것" if scene.get("class_subject") == "MATH" else "아이가_읽은_동시"
+        brief[key] = scene["poem_text"]
     if scene.get("practiced_word"):
         brief["연습한_낱말"] = scene["practiced_word"]
     return brief

@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 from enum import Enum
+from typing import Literal
 
 from pydantic import Field
 
@@ -56,8 +57,19 @@ class SceneInput(CamelRequest):
     partner_line: str | None = None
     #: 아이가 고른 문장. 고르지 않고 넘어갔으면 ``None``
     child_said: str | None = None
-    #: class 장면 필수 — 아이가 읽은 동시 전문
+    #: class 장면 필수 — 아이가 수업시간에 한 일.
+    #:
+    #: 이름이 poem_text 인 것은 처음에 수업시간이 동시 읽기 하나뿐이었기 때문이다.
+    #: 지금은 수학(과일 세기)도 있어서 **이름만으로는 무엇인지 알 수 없다** —
+    #: 어느 쪽인지는 아래 class_subject 가 말한다. 이름을 바꾸지 않는 이유는
+    #: 이미 배포된 앱이 poemText 로 보내고 있어서다. 그쪽을 깨뜨릴 수 없다.
     poem_text: str | None = None
+    #: 수업시간의 과목. 없으면 국어(동시)로 본다 — 옛 앱은 이 값을 안 보낸다.
+    #:
+    #: **이게 없으면 동화가 거짓말을 한다.** 실제로 그랬다: 과일을 센 아이의
+    #: 기록이 "아이가_읽은_동시" 라는 이름으로 LLM 에 넘어가고, 대체 문구는
+    #: "동시를 또박또박 읽었어요" 였다. 아이는 그날 시를 읽지 않았다.
+    class_subject: Literal["KOREAN", "MATH"] | None = None
     #: 발음이 약해 연습한 낱말(``/feedback/speaking`` 의 targetWord). 없으면 ``None``
     practiced_word: str | None = None
 

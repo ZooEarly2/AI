@@ -31,6 +31,41 @@ VALID_BODY = {
 }
 
 
+def test_math_scene_is_not_told_as_a_poem(client):
+    """수학을 한 날의 동화가 "동시를 읽었다" 고 하면 안 된다.
+
+    수업시간은 국어(동시 읽기)와 수학(과일 세기) 둘이다. 그런데 둘 다 같은
+    필드(poemText)로 오고, 그 필드는 이름부터 "동시" 다. classSubject 를 안 보면
+    과일을 센 아이의 기록이 "아이가_읽은_동시" 로 LLM 에 넘어가고, 대체 문구는
+    "동시를 또박또박 읽었어요" 가 된다 — 아이는 그날 시를 읽지 않았다.
+
+    동화는 아이가 실제로 한 일만 적는다는 것이 이 기능의 전제라, 여기서 막는다.
+    """
+    body = copy.deepcopy(VALID_BODY)
+    body["scenes"][1] = {
+        "category": "class",
+        "classSubject": "MATH",
+        "poemText": "사과 세 개를 세었어요.",
+    }
+    response = client.post("/internal/v1/story/generate", json=body)
+    assert response.status_code == 200
+    scene = next(s for s in data_of(response)["scenes"] if s["category"] == "class")
+    assert "동시" not in scene["narration"], scene["narration"]
+    assert "국어" not in scene["narration"], scene["narration"]
+
+
+def test_class_scene_without_subject_is_still_a_poem(client):
+    """classSubject 를 안 보내면 국어로 본다.
+
+    이미 배포된 앱은 이 필드를 모른다. 없다고 거절하거나 수학으로 넘겨 버리면,
+    그 앱들이 만드는 동화가 통째로 어긋난다.
+    """
+    response = client.post("/internal/v1/story/generate", json=VALID_BODY)
+    assert response.status_code == 200
+    scene = next(s for s in data_of(response)["scenes"] if s["category"] == "class")
+    assert "동시" in scene["narration"], scene["narration"]
+
+
 def test_story_accepts_camel_case_body(client):
     response = client.post("/internal/v1/story/generate", json=VALID_BODY)
     assert response.status_code == 200

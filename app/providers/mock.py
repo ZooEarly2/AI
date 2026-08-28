@@ -182,10 +182,16 @@ def _mock_scene(child_name: str, scene: dict) -> StorySceneResult:
 
     if category == "class":
         first_line = poem_text.split(".")[0].strip() or "동시"
-        narration = (
-            f"{subject} 국어책을 펴고 동시를 읽었어요. "
-            f"「{first_line}」 하고 또박또박 읽었지요."
-        )
+        if scene.get("class_subject") == "MATH":
+            narration = (
+                f"{subject} 수학책을 펴고 과일을 세었어요. "
+                f"「{first_line}」 하고 또박또박 말했지요."
+            )
+        else:
+            narration = (
+                f"{subject} 국어책을 펴고 동시를 읽었어요. "
+                f"「{first_line}」 하고 또박또박 읽었지요."
+            )
         if practiced:
             narration += f" '{practiced}' 소리를 천천히 다시 읽어 보니 훨씬 또렷해졌어요."
         quote = poem_text or None

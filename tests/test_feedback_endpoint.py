@@ -73,6 +73,32 @@ def test_translation_parts_point_at_real_tokens(client):
     assert checked == 36, checked  # 18문장 x 2언어
 
 
+#: 수학 문장 15개를 **여기에 손으로 적어 둔다.**
+#:
+#: 검사 대상(SENTENCES)에서 기대값을 가져오면 자기 자신과 비교하는 것이라 아무것도
+#: 못 지킨다 — 문장을 실수로 고쳐도 테스트는 그대로 통과한다. 이 표가 지키는 것은
+#: **앱 화면에 뜨는 글자와 서버가 채점하는 문장이 같다** 는 것이고, 앱 쪽 짝은
+#: frontend/src/scenarios/counting.ts 의 countSentence() 다. 둘 중 하나를 고치면
+#: 여기가 깨져야 한다. 그게 이 표의 존재 이유다.
+MATH_SENTENCES = {
+    "math_1": "사과가 한 개 있어요",
+    "math_2": "사과가 두 개 있어요",
+    "math_3": "사과가 세 개 있어요",
+    "math_4": "사과가 네 개 있어요",
+    "math_5": "사과가 다섯 개 있어요",
+    "math_6": "수박이 한 개 있어요",
+    "math_7": "수박이 두 개 있어요",
+    "math_8": "수박이 세 개 있어요",
+    "math_9": "수박이 네 개 있어요",
+    "math_10": "수박이 다섯 개 있어요",
+    "math_11": "바나나가 한 개 있어요",
+    "math_12": "바나나가 두 개 있어요",
+    "math_13": "바나나가 세 개 있어요",
+    "math_14": "바나나가 네 개 있어요",
+    "math_15": "바나나가 다섯 개 있어요",
+}
+
+
 def test_math_sentences_are_scorable(client, wav_bytes):
     """수학 문장 15개가 실제로 채점을 통과하는가.
 
@@ -85,17 +111,17 @@ def test_math_sentences_are_scorable(client, wav_bytes):
     살아 있어야 한다. 하나만 없어도 그 과일·그 개수가 나온 아이만 채점을 못 받는데,
     회차마다 무작위라 재현이 어렵다.
     """
-    ids = [sid for sid in SENTENCES if sid.value.startswith("math_")]
-    assert len(ids) == 15, len(ids)  # 과일 3종 x 개수 1~5
-
-    for sid in ids:
+    for sid, expected in MATH_SENTENCES.items():
         response = client.post(
             "/internal/v1/feedback/speaking",
             files={"audio": ("speech.m4a", wav_bytes, "audio/mp4")},
-            data={"sentenceId": sid.value},
+            data={"sentenceId": sid},
         )
-        assert response.status_code == 200, (sid.value, response.text)
-        assert data_of(response)["sentence"] == SENTENCES[sid]
+        assert response.status_code == 200, (sid, response.text)
+        assert data_of(response)["sentence"] == expected, sid
+
+    # 카탈로그에 이 15개 말고 다른 math_* 가 끼어들지 않았는지도 본다
+    assert {s.value for s in SENTENCES if s.value.startswith("math_")} == set(MATH_SENTENCES)
 
 
 def test_unknown_sentence_id_is_invalid_parameter_not_off_script(client, wav_bytes):

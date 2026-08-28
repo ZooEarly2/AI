@@ -107,7 +107,10 @@ def _normalise_scenes(inputs: list[SceneInput], raw_scenes: list) -> list[SceneO
 
 def _fallback_narration(scene: SceneInput) -> str:
     if (scene.poem_text or "").strip():
-        return f"동시를 또박또박 읽었어요. 「{scene.poem_text.strip()}」"
+        text = scene.poem_text.strip()
+        if scene.class_subject == "MATH":
+            return f"수학책을 펴고 과일을 세었어요. 「{text}」"
+        return f"동시를 또박또박 읽었어요. 「{text}」"
     partner = (scene.partner_line or "").strip()
     said = (scene.child_said or "").strip()
     if said:
