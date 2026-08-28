@@ -31,6 +31,33 @@ VALID_BODY = {
 }
 
 
+def test_class_subject_comes_back_so_the_app_can_pick_the_picture(client):
+    """수업시간 장면이 어느 과목이었는지 응답에 실려 돌아와야 한다.
+
+    삽화에 "국어시간 · 동시 읽어보기" 가 **글자로 그려져 있다.** 앱은 장면의
+    category 하나로 그림을 고르는데, 과목을 모르면 과일을 센 아이에게 국어 그림이
+    나간다. 실제로 그렇게 나갔다.
+
+    앨범은 서버가 돌려준 장면을 그대로 저장하므로, 여기 실어 보내지 않으면 나중에
+    동화를 다시 꺼내 볼 때도 영영 알 수 없다.
+    """
+    body = copy.deepcopy(VALID_BODY)
+    body["scenes"][1] = {
+        "category": "class",
+        "classSubject": "MATH",
+        "poemText": "사과 세 개를 세었어요.",
+    }
+    response = client.post("/internal/v1/story/generate", json=body)
+    assert response.status_code == 200
+    scene = next(s for s in data_of(response)["scenes"] if s["category"] == "class")
+    assert scene["classSubject"] == "MATH", scene
+
+    # 안 보내면 None 이다 — 옛 앱은 이 값을 모른다. 국어로 넘겨짚지 않는다.
+    plain = client.post("/internal/v1/story/generate", json=VALID_BODY)
+    scene = next(s for s in data_of(plain)["scenes"] if s["category"] == "class")
+    assert scene["classSubject"] is None, scene
+
+
 def test_partner_is_named_not_called_a_stranger(client):
     """말을 건 사람을 이름으로 부른다. "다른 사람" 으로 뭉뚱그리면 안 된다.
 

@@ -95,6 +95,13 @@ class SceneOutput(CamelModel):
     quote: str | None
     #: 동화 문장 2~3개. 실제 기록만 기반으로 쓰고 새 사건·인물을 만들지 않는다
     narration: str
+    #: 수업시간의 과목. 요청에 담겨 온 값을 그대로 돌려준다.
+    #:
+    #: **앱이 삽화를 이 값으로 고른다.** 그림에 "국어시간 · 동시 읽어보기" 가 글자로
+    #: 그려져 있어서, 과목을 모르면 과일을 센 아이에게 국어 그림이 나간다.
+    #: 앨범은 서버가 돌려준 장면을 그대로 저장하므로, 여기 실어 보내지 않으면
+    #: **나중에 다시 꺼내 볼 때도 영영 알 수 없다** — 그래서 되돌려 준다.
+    class_subject: Literal["KOREAN", "MATH"] | None = None
 
 
 class StoryData(CamelModel):

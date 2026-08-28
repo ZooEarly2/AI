@@ -101,6 +101,9 @@ def _normalise_scenes(inputs: list[SceneInput], raw_scenes: list) -> list[SceneO
                 # 아이가 하지 않은 말이 동화에 실리면 안 된다.
                 quote=(scene_input.child_said or "").strip() or None,
                 narration=narration,
+                # 앱이 삽화를 고를 때 쓴다. LLM 이 정하는 값이 아니라 요청에 담겨
+                # 온 사실이므로 입력에서 그대로 옮긴다.
+                class_subject=scene_input.class_subject,
             )
         )
     return scenes
