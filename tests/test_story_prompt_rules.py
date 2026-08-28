@@ -21,14 +21,18 @@
 from app.providers.clients.story_client import _SYSTEM_PROMPT, _scene_brief
 
 
-def test_prompt_requires_quoting_the_poem():
-    """읽은 동시를 그대로 옮기라고 시켜야 한다."""
-    assert "아이가_읽은_동시" in _SYSTEM_PROMPT
-    # "그대로 옮겨 적는다" 는 지시 자체를 본다. 「 」 만 세면 규칙 9 의 다른 문장에도
-    # 그 기호가 있어서, 지시를 "언급한다" 로 흐려 놔도 통과해 버린다(실측).
-    assert "그대로 옮겨 적는다" in _SYSTEM_PROMPT
-    # "동시를 읽었어요" 로만 적고 넘어가지 말라는 금지가 있어야 한다.
-    assert "동시를 읽었어요" in _SYSTEM_PROMPT
+def test_prompt_names_the_poem_but_does_not_recite_it():
+    """제목과 틀린 낱말 하나만 적게 해야 한다.
+
+    처음에는 시를 통째로 옮기게 했다. 그랬더니 무슨 시를 읽었는지는 알게 됐지만
+    네 줄짜리 시가 동화 한 장을 다 먹어서 읽기 힘들어졌다. 지금은 제목을 부르고
+    그날 연습한 낱말 하나만 남긴다.
+    """
+    assert "읽은_시_제목" in _SYSTEM_PROMPT
+    assert "연습한_낱말" in _SYSTEM_PROMPT
+    # 통째로 옮기라는 옛 지시가 남아 있으면 안 된다.
+    assert "그대로 옮겨 적는다" not in _SYSTEM_PROMPT
+    assert "통째로 옮기지 않는다" in _SYSTEM_PROMPT
 
 
 def test_prompt_warns_that_opening_and_narration_are_joined():
@@ -60,3 +64,42 @@ def test_class_scene_is_labelled_by_subject():
     assert "아이가_센_것" in maths
     # 프롬프트가 두 이름을 모두 알고 있어야 규칙이 걸린다.
     assert "아이가_센_것" in _SYSTEM_PROMPT
+
+
+def test_poem_body_is_withheld_when_the_title_is_known():
+    """제목을 알면 본문을 안 넘긴다.
+
+    부탁만으로는 안 지켜졌다 — 본문을 주면 동화가 시를 통째로 옮겨 적어 네 줄짜리
+    시가 한 장을 다 먹었다. 줄 수 없게 만드는 편이 확실하다.
+    """
+    brief = _scene_brief(
+        {
+            "category": "class",
+            "poem_text": "파도가 와요, 철썩 내 발을 만져요 내가 뒤로 가면 파도도 따라와요.",
+            "poem_title": "파도",
+            "class_subject": "KOREAN",
+            "practiced_word": "만져요",
+        }
+    )
+    assert brief["읽은_시_제목"] == "파도"
+    assert "아이가_읽은_동시" not in brief
+    assert "파도가 와요" not in str(brief)   # 본문이 어떤 자리로도 새면 안 된다
+    assert brief["연습한_낱말"] == "만져요"   # 틀린 낱말 하나는 남는다
+
+
+def test_old_app_without_a_title_still_sends_the_body():
+    """제목을 안 보내는 옛 앱에서도 수업 장면이 비지 않아야 한다."""
+    brief = _scene_brief(
+        {"category": "class", "poem_text": "노란 꽃이 피었어요", "class_subject": "KOREAN"}
+    )
+    assert brief["아이가_읽은_동시"] == "노란 꽃이 피었어요"
+    assert "읽은_시_제목" not in brief
+
+
+def test_math_ignores_the_title_field():
+    """수학은 시가 아니다. 제목 자리가 비어 있어도 센 것이 넘어가야 한다."""
+    brief = _scene_brief(
+        {"category": "class", "poem_text": "사과 세 개를 세었어요.", "class_subject": "MATH"}
+    )
+    assert brief["아이가_센_것"] == "사과 세 개를 세었어요."
+    assert "읽은_시_제목" not in brief

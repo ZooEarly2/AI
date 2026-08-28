@@ -7,6 +7,8 @@
 
 from __future__ import annotations
 
+import re
+
 from app.core.exceptions import InvalidRequest, UpstreamUnavailable
 from app.core.korean import josa
 from app.core.logging import get_logger
@@ -74,6 +76,40 @@ def _validate_scenes(scenes: list[SceneInput]) -> None:
             )
 
 
+#: 문장이 끝났다고 볼 수 있는 부호.
+_SENTENCE_END = (".", "!", "?", "…", ".", "!", "?", "~")
+
+
+def _closed(text: str) -> str:
+    """문장을 끝맺어 돌려준다.
+
+    화면은 ``{opening} {narration}`` 으로 둘을 한 줄에 이어 붙인다. opening 이
+    "급식실이에요" 처럼 부호 없이 끝나면 "급식실이에요 급식 선생님께서…" 가 되어
+    한 문장처럼 읽힌다. 부호를 LLM 에게 맡기면 들쭉날쭉해서 여기서 못 박는다.
+    """
+    text = text.strip()
+    if not text or text.endswith(_SENTENCE_END):
+        return text
+    # 따옴표로 닫힌 경우(…했어요") 는 그 안쪽을 보고 판단한다
+    if text[-1] in "\"'”’」』" and len(text) > 1 and text[-2] in _SENTENCE_END:
+        return text
+    return text + "."
+
+
+#: 일본어 가나. 한국어 동화에 한 글자도 있어서는 안 된다.
+_KANA = re.compile(r"[぀-ヿ]")
+
+
+def _is_korean(text: str) -> bool:
+    """한국어 문장인가.
+
+    LLM 이 드물게 조사를 일본어로 낸다 — "「파도」を 읽었어요"(6번 중 2번 실측).
+    한 글자 차이라 눈으로는 잘 안 잡히는데, 이 글은 한국어를 배우는 아이가 읽는
+    글이라 틀린 조사가 섞이면 안 된다. 프롬프트로도 막지만 여기서 한 번 더 본다.
+    """
+    return not _KANA.search(text or "")
+
+
 def _normalise_scenes(inputs: list[SceneInput], raw_scenes: list) -> list[SceneOutput]:
     """LLM 응답을 요청과 같은 개수·순서·카테고리로 맞춘다.
 
@@ -90,13 +126,23 @@ def _normalise_scenes(inputs: list[SceneInput], raw_scenes: list) -> list[SceneO
     for scene_input in inputs:
         raw = by_category.get(scene_input.category.value, {})
         narration = str(raw.get("narration") or "").strip()
-        if not narration:
+        if not narration or not _is_korean(narration):
+            # 가나가 섞인 문장은 통째로 버린다. 그 글자만 지우면 조사가 사라져
+            # "「파도」 읽었어요" 같은 비문이 남는다 — 기록으로 다시 쓰는 편이 낫다.
+            if narration:
+                log.warning("동화 문장에 한글이 아닌 글자가 섞여 되돌린다: %s", narration[:80])
             narration = _fallback_narration(scene_input)
         scenes.append(
             SceneOutput(
                 category=scene_input.category,
                 subtitle=str(raw.get("subtitle") or "오늘의 한 장면").strip(),
-                opening=str(raw.get("opening") or "그때였어요").strip(),
+                # 소제목은 부호를 안 붙인다 — 제목이라 마침표가 없는 편이 맞다.
+                # 여는 말은 뒤에 narration 이 바로 이어 붙으므로 반드시 끝맺는다.
+                opening=_closed(
+                    str(raw.get("opening") or "그때였어요")
+                    if _is_korean(str(raw.get("opening") or ""))
+                    else "그때였어요"
+                ),
                 # 인용은 아이가 실제로 한 말만 쓴다. LLM 이 다른 말을 넣어도 무시한다 —
                 # 아이가 하지 않은 말이 동화에 실리면 안 된다.
                 quote=(scene_input.child_said or "").strip() or None,
@@ -110,11 +156,16 @@ def _normalise_scenes(inputs: list[SceneInput], raw_scenes: list) -> list[SceneO
 
 
 def _fallback_narration(scene: SceneInput) -> str:
-    if (scene.poem_text or "").strip():
-        text = scene.poem_text.strip()
+    if (scene.poem_text or "").strip() or (scene.poem_title or "").strip():
         if scene.class_subject == "MATH":
-            return f"수학책을 펴고 과일을 세었어요. 「{text}」"
-        return f"동시를 또박또박 읽었어요. 「{text}」"
+            return f"수학책을 펴고 과일을 세었어요. 「{scene.poem_text.strip()}」"
+        # 제목을 알면 제목만 부른다. 시 전문을 옮기면 한 장이 시로만 가득 찬다.
+        title = (scene.poem_title or "").strip()
+        word = (scene.practiced_word or "").strip()
+        if title:
+            said = f" 「{word}」 를 또박또박 읽었어요." if word else ""
+            return f"「{title}」 라는 동시를 읽었어요.{said}"
+        return f"동시를 또박또박 읽었어요. 「{scene.poem_text.strip()}」"
     partner = (scene.partner_line or "").strip()
     said = (scene.child_said or "").strip()
     # 누가 한 말인지 알면 이름을 부른다. 모르면 사람을 지어내지 않고 말만 적는다.
