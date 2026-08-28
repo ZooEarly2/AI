@@ -196,7 +196,13 @@ def _mock_scene(child_name: str, scene: dict) -> StorySceneResult:
             narration += f" '{practiced}' 소리를 천천히 다시 읽어 보니 훨씬 또렷해졌어요."
         quote = poem_text or None
     else:
-        narration = f"{subject} 가만히 귀를 기울였어요. 「{partner_line}」 하는 말이 들렸지요."
+        who = (scene.get("partner_name") or "").strip()
+        heard = (
+            f"{josa(who, '이', '가')} 「{partner_line}」 하고 말했지요."
+            if who
+            else f"「{partner_line}」 하는 말이 들렸지요."
+        )
+        narration = f"{subject} 가만히 귀를 기울였어요. {heard}"
         if child_said:
             narration += f" {subject} 용기를 내어 「{child_said}」 하고 대답했어요."
         else:

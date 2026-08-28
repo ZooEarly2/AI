@@ -31,6 +31,52 @@ VALID_BODY = {
 }
 
 
+def test_partner_is_named_not_called_a_stranger(client):
+    """말을 건 사람을 이름으로 부른다. "다른 사람" 으로 뭉뚱그리면 안 된다.
+
+    프롬프트가 "기록에 없는 인물을 만들지 마라" 라고 못박아 두어서, 누가 말했는지를
+    안 알려주면 LLM 은 뭉뚱그리는 수밖에 없다. 실제로 동화에 "급식 시간에 다른
+    사람이 「불고기 많이 줄까?」라고 말했어요" 로 나갔다 — 아이가 오늘 만난 사람은
+    급식 선생님이었는데.
+
+    조사도 같이 본다. 받침에 따라 "급식 선생님이" 와 "호랑이 친구가" 로 갈린다.
+    """
+    body = copy.deepcopy(VALID_BODY)
+    body["scenes"][2] = {
+        "category": "lunch",
+        "partnerName": "급식 선생님",
+        "partnerLine": "불고기 많이 줄까?",
+        "childSaid": "적당히 주세요.",
+    }
+    body["scenes"][0] = {
+        "category": "school_arrival",
+        "partnerName": "호랑이 친구",
+        "partnerLine": "안녕! 만나서 반가워.",
+        "childSaid": "안녕 나도 만나서 반가워 !",
+    }
+    response = client.post("/internal/v1/story/generate", json=body)
+    assert response.status_code == 200
+    scenes = {s["category"]: s["narration"] for s in data_of(response)["scenes"]}
+
+    assert "다른 사람" not in scenes["lunch"], scenes["lunch"]
+    assert "급식 선생님이" in scenes["lunch"], scenes["lunch"]
+    # 받침이 없으면 "가" 다. "호랑이 친구이" 로 나가면 안 된다.
+    assert "호랑이 친구가" in scenes["school_arrival"], scenes["school_arrival"]
+    assert "호랑이 친구이" not in scenes["school_arrival"], scenes["school_arrival"]
+
+
+def test_scene_without_partner_name_invents_nobody(client):
+    """이름을 안 보내면 사람을 지어내지 않고 들린 말만 적는다.
+
+    이미 배포된 앱은 partnerName 을 모른다. 그 앱들이 만드는 동화가 갑자기
+    엉뚱한 인물을 데려오면 안 된다.
+    """
+    response = client.post("/internal/v1/story/generate", json=VALID_BODY)
+    assert response.status_code == 200
+    for scene in data_of(response)["scenes"]:
+        assert "급식 선생님" not in scene["narration"], scene["narration"]
+
+
 def test_math_scene_is_not_told_as_a_poem(client):
     """수학을 한 날의 동화가 "동시를 읽었다" 고 하면 안 된다.
 

@@ -35,6 +35,11 @@ _SYSTEM_PROMPT = """\
 6. quote 는 아이가 실제로 한 말을 그대로 옮긴다. 한 말이 없으면 null 이다.
    아이가 하지 않은 말을 quote 에 넣지 않는다.
 7. 평가하거나 점수를 매기지 않는다. 잘못을 지적하지 않는다.
+8. 상대가_누구인가 가 있으면 **그 이름을 그대로 부른다** — "급식 선생님이",
+   "호랑이 친구가" 처럼. "다른 사람이" 나 "누군가" 로 뭉뚱그리지 않는다.
+   어른(선생님·아주머니)에게는 높임을 쓴다: "선생님께서 ~라고 말씀하셨어요".
+   또래 친구에게는 쓰지 않는다. 이름이 없으면 그 사람을 아예 언급하지 않고
+   들린 말만 적는다 — 없는 인물을 지어내는 것보다 낫다.
 
 출력은 아래 JSON 스키마 하나뿐이다. 설명·마크다운을 덧붙이지 않는다.
 {"title": "...", "scenes": [{"category": "...", "subtitle": "...", "opening": "...",
@@ -47,6 +52,8 @@ def _scene_brief(scene: dict) -> dict:
     category = scene.get("category")
     label = CATEGORY_LABELS.get(StoryCategory(category), category) if category else category
     brief: dict[str, str] = {"category": str(category), "장면": str(label)}
+    if scene.get("partner_name"):
+        brief["상대가_누구인가"] = scene["partner_name"]
     if scene.get("partner_line"):
         brief["상대가_한_말"] = scene["partner_line"]
     if scene.get("child_said"):

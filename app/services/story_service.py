@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 from app.core.exceptions import InvalidRequest, UpstreamUnavailable
+from app.core.korean import josa
 from app.core.logging import get_logger
 from app.providers.base import InferenceProvider
 from app.schemas.story import (
@@ -113,6 +114,14 @@ def _fallback_narration(scene: SceneInput) -> str:
         return f"동시를 또박또박 읽었어요. 「{text}」"
     partner = (scene.partner_line or "").strip()
     said = (scene.child_said or "").strip()
+    # 누가 한 말인지 알면 이름을 부른다. 모르면 사람을 지어내지 않고 말만 적는다.
+    # 받침에 따라 조사가 갈린다 — "급식 선생님이" 지만 "호랑이 친구가" 다
+    who = (scene.partner_name or "").strip()
+    lead = (
+        f"{josa(who, '이', '가')} 「{partner}」 하고 말했어요."
+        if who
+        else f"「{partner}」 하는 말이 들렸어요."
+    )
     if said:
-        return f"「{partner}」 하는 말에 「{said}」 하고 대답했어요."
-    return f"「{partner}」 하는 말을 가만히 들었어요."
+        return f"{lead} 그래서 「{said}」 하고 대답했어요."
+    return f"{lead} 가만히 귀를 기울였어요."

@@ -55,6 +55,12 @@ class SceneInput(CamelRequest):
     category: StoryCategory
     #: 대화 장면 필수 — 상대방이 아이에게 한 말
     partner_line: str | None = None
+    #: 그 말을 한 사람("급식 선생님" · "코끼리 선생님" · "호랑이 친구").
+    #:
+    #: **없으면 동화가 "다른 사람이" 라고 쓴다.** 프롬프트가 "기록에 없는 인물을
+    #: 만들지 마라" 라고 못박아 두어서, 누구인지 안 알려주면 LLM 은 뭉뚱그리는
+    #: 수밖에 없다. 옛 앱은 이 값을 안 보내므로 없으면 예전처럼 동작한다.
+    partner_name: str | None = None
     #: 아이가 고른 문장. 고르지 않고 넘어갔으면 ``None``
     child_said: str | None = None
     #: class 장면 필수 — 아이가 수업시간에 한 일.
